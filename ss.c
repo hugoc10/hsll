@@ -1,3 +1,6 @@
+#define _POSIX_C_SOURCE 200809L // dprintf
+
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,8 +8,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define SYNC 1
-#define ASYNC 0
+enum RUNOPT {
+        SYNC = 1,
+        ASYNC = 0,
+};
 
 #ifndef strdup
 #define strdup(s) memcpy(malloc(strlen((s)) + 1), (s), strlen((s)) + 1)
@@ -15,8 +20,8 @@
 char *expand(char *);
 void prompt();
 
-char *PROMPT = ">> ";
-bool alive = true;
+static char *PROMPT = ">> ";
+static bool alive = true;
 
 void
 prompt()
@@ -49,31 +54,32 @@ split(char *str, char sep)
         return arr;
 }
 
+void
+freesplit(char **split)
+{
+        free(*split);
+        free(split);
+}
+
 int
 run(char **argv, int fdin, int fdout, bool sync, int *pid)
 {
         int child;
         int status = 0;
-        int fdinold, fdoutold;
 
         switch (child = fork()) {
         case -1:
                 perror("fork");
                 return -1;
-        case 0: {
-                fdinold = dup(STDIN_FILENO);
-                fdoutold = dup(STDOUT_FILENO);
+
+        case 0:
                 dup2(fdin, STDIN_FILENO);
                 dup2(fdout, STDOUT_FILENO);
 
-                execvp(argv[0], argv);
-                perror(argv[0]);
+                status = execvp(argv[0], argv);
+                dprintf(fdout, "%s: %s\n", argv[0], strerror(errno));
+                exit(status);
 
-                dup2(STDIN_FILENO, fdinold);
-                dup2(STDOUT_FILENO, fdoutold);
-
-                exit(0);
-        }
         default:
                 if (pid) *pid = child;
                 if (sync) waitpid(child, &status, 0);
@@ -92,7 +98,7 @@ is_builtin(char *cmd)
 {
         return !strcmp("cd", cmd) ||
                !strcmp("exit", cmd) ||
-               0;
+               0; // style reasons
 }
 
 int
@@ -102,16 +108,21 @@ run_builtin(char **argv, int fdin, int fdout, bool sync, int *pid)
         int status = 0;
         int fdinold, fdoutold;
 
-        if (sync == ASYNC)
+        if (sync == ASYNC) {
                 fprintf(stderr, "builtin cmd (%s) should be sync\n", *argv);
+                return 1;
+        }
 
         fdinold = dup(STDIN_FILENO);
         fdoutold = dup(STDOUT_FILENO);
         dup2(fdin, STDIN_FILENO);
         dup2(fdout, STDOUT_FILENO);
 
-        if (!strcmp("cd", *argv)) status = cd(argv);
-        if (!strcmp("exit", *argv)) alive = false;
+        // clang-format off
+        if (0); // style reasons 
+        else if (!strcmp("cd", *argv)) status = cd(argv);
+        else if (!strcmp("exit", *argv)) alive = false;
+        // clang-format on
 
         dup2(STDIN_FILENO, fdinold);
         dup2(STDOUT_FILENO, fdoutold);
@@ -124,24 +135,23 @@ execute(char *cmd)
 {
         char **scmd = split(cmd, ' ');
 
-        if (is_builtin(scmd[0])) {
-                run_builtin(scmd, STDIN_FILENO, STDOUT_FILENO, SYNC, NULL);
-        } else
-                run(scmd, STDIN_FILENO, STDOUT_FILENO, SYNC, NULL);
+        (is_builtin(scmd[0]) ? run_builtin : run)
+        /* Call the prev function with this arguments */
+        (scmd, STDIN_FILENO, STDOUT_FILENO, SYNC, NULL);
 
-        free(*scmd);
-        free(scmd);
+        freesplit(scmd);
         return 0;
 }
 
 char *
 getinput()
 {
-        char *buf = malloc(127);
-        while (!fgets(buf, 127, stdin)) {
+/*   */ #define SIZE 1024
+        char *buf = malloc(SIZE);
+        while (!fgets(buf, SIZE, stdin)) {
                 prompt();
         }
-        buf[strcspn(buf, "\n\r")] = 0;
+        buf[SIZE - 1] = buf[strcspn(buf, "\n\r")] = 0;
         return buf;
 }
 
