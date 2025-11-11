@@ -95,8 +95,8 @@ int
 getint(void **value, char **s)
 {
         char *start = *s;
-        int n = 0;
-        int m = 1;
+        long n = 0;
+        long m = 1;
 
         if (consume(s, '-')) m = -1;
         if (consume(s, '+')) m = 1;
@@ -126,9 +126,9 @@ int
 getfloat(void **value, char **s)
 {
         char *start = *s;
-        float n = 0;
-        float d = 1;
-        float m = 1;
+        double n = 0;
+        double d = 1;
+        double m = 1;
 
         if (consume(s, '-')) m = -1;
         if (consume(s, '+')) m = 1;
@@ -192,13 +192,13 @@ getarg(Call *call, char **line)
         else if (!getint(&value, line)) {
                 call_add_arg_value(call, value);
                 call_add_arg_type(call, &ffi_type_sint);
-                printf("INT ARG: %d\n", *(int *) value);
+                printf("INT ARG: %ld\n", *(long *) value);
         }
 
         else if (!getfloat(&value, line)) {
                 call_add_arg_value(call, value);
                 call_add_arg_type(call, &ffi_type_float);
-                printf("FLOAT ARG: %f\n", *(float *) value);
+                printf("DOUBLE ARG: %lf\n", *(double *) value);
         }
 
         else if (!getstring(&value, line)) {
