@@ -1,0 +1,14 @@
+                                      hsll
+Hugo's Shell. You can call C functions from libraries linked at compile time.
+You can link more libraries if you want. 
+
+                                  Limitations
+It only accepts values of the following types: const int, const float and const
+string. It assumes that all functions return int. 
+
+                                     Errors
+The floats are parsed correctly but printf can't print it. I don't know what
+happens.
+
+
+

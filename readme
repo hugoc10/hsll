@@ -1,6 +1,0 @@
-                                       ss
-Simplest shell. You can run vim btw. Just `make run` and execute some commands.
-You can't pipe or do any of that bash-scripting stuff.
-
-
-
