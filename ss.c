@@ -203,7 +203,7 @@ getarg(Call *call, char **line)
 
         else if (!getstring(&value, line)) {
                 call_add_arg_value(call, value);
-                call_add_arg_type(call, &ffi_type_float);
+                call_add_arg_type(call, &ffi_type_pointer);
                 printf("STR ARG: %s\n", *(char **) value);
         }
 
